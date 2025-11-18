@@ -3,6 +3,7 @@ import Charts
 
 struct ContentView: View {
     @StateObject private var viewModel = GPUMonitorViewModel()
+    @State private var isDarkMode = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -10,6 +11,12 @@ struct ContentView: View {
                 .font(.largeTitle)
                 .bold()
                 .padding(.top)
+
+            HStack(spacing: 20) {
+                pollingIntervalControl
+                darkModeToggle
+            }
+            .padding(.horizontal)
 
             serverStatusView
                 .padding(.horizontal)
@@ -24,12 +31,46 @@ struct ContentView: View {
             Spacer()
         }
         .frame(minWidth: 800, minHeight: 600)
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .onAppear {
             viewModel.startMonitoring()
         }
         .onDisappear {
             viewModel.stopMonitoring()
         }
+    }
+
+    private var darkModeToggle: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dark Mode")
+                .font(.headline)
+
+            Toggle("", isOn: $isDarkMode)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .padding()
+        .background(Color(.windowBackgroundColor))
+        .cornerRadius(10)
+    }
+
+    private var pollingIntervalControl: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Polling Interval:")
+                    .font(.headline)
+                Spacer()
+                Text("\(viewModel.pollingInterval, specifier: "%.0f") second\(viewModel.pollingInterval == 1 ? "" : "s")")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+
+            Slider(value: $viewModel.pollingInterval, in: 1...30, step: 1)
+                .frame(maxWidth: 400)
+        }
+        .padding()
+        .background(Color(.windowBackgroundColor))
+        .cornerRadius(10)
     }
 
     private var serverStatusView: some View {
