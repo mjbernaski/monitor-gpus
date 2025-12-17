@@ -1,0 +1,28 @@
+name: GPUMonitorWatch
+options:
+  bundleIdPrefix: com.gpumonitor
+  deploymentTarget:
+    watchOS: "10.0"
+  createIntermediateGroups: true
+
+targets:
+  GPUMonitorWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - Sources
+    resources:
+      - servers.json
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.watch
+      PRODUCT_NAME: GPU Monitor
+      INFOPLIST_FILE: Info.plist
+      MARKETING_VERSION: "1.0"
+      CURRENT_PROJECT_VERSION: "1"
+      SWIFT_VERSION: "5.9"
+      WATCHOS_DEPLOYMENT_TARGET: "10.0"
+      CODE_SIGN_STYLE: Automatic
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      SKIP_INSTALL: false
+      SUPPORTS_MACCATALYST: false
