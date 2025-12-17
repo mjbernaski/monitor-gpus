@@ -3,12 +3,14 @@ import Foundation
 struct GPUStatus: Codable, Identifiable {
     var id: String { hostname }
     let hostname: String
+    var ipAddress: String?
     let timestamp: String
     let gpuCount: Int
     let gpus: [GPU]
 
     enum CodingKeys: String, CodingKey {
         case hostname
+        case ipAddress
         case timestamp
         case gpuCount = "gpu_count"
         case gpus

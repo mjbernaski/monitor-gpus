@@ -154,6 +154,12 @@ struct ContentView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                             #endif
+                        
+                        if let ipAddress = status.ipAddress {
+                            Text(ipAddress)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
 
                         Text("\(status.totalWattage, specifier: "%.1f") W")
                             .font(.system(.body, design: .monospaced))

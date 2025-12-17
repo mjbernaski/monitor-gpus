@@ -55,7 +55,9 @@ actor GPUService {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let decoder = JSONDecoder()
-            return try decoder.decode(GPUStatus.self, from: data)
+            var status = try decoder.decode(GPUStatus.self, from: data)
+            status.ipAddress = server
+            return status
         } catch {
             print("Error fetching from \(server): \(error)")
             return nil

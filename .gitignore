@@ -3,3 +3,5 @@
 *.swp
 *.xcodeproj
 *.xcworkspace
+*.app
+*.dmg
