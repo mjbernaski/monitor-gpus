@@ -10,7 +10,10 @@ let package = Package(
     products: [
         .executable(
             name: "GPUMonitor",
-            targets: ["GPUMonitor"])
+            targets: ["GPUMonitor"]),
+        .executable(
+            name: "gpu-cli",
+            targets: ["GPUMonitorCLI"])
     ],
     dependencies: [],
     targets: [
@@ -21,6 +24,11 @@ let package = Package(
             resources: [
                 .copy("../servers.json")
             ]
+        ),
+        .executableTarget(
+            name: "GPUMonitorCLI",
+            dependencies: [],
+            path: "SourcesCLI"
         )
     ]
 )
