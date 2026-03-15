@@ -113,7 +113,7 @@ struct ContentView: View {
                     .minimumScaleFactor(0.5)
                 Spacer()
                 Text("\(status.totalWattage, specifier: "%.0f")W")
-                    .font(.system(size: 48, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 76, weight: .heavy, design: .monospaced))
                     .foregroundColor(colorForWattage(status.totalWattage))
             }
 
@@ -146,10 +146,11 @@ struct ContentView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white.opacity(0.5))
 
-            // Large utilization ring that fills available space
+            // Utilization ring sized to avoid overlap with header
             utilizationRing(percent: gpu.utilizationPercent)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .aspectRatio(1, contentMode: .fit)
+                .padding(8)
 
             if let memMb = gpu.memoryFreeMb {
                 Text(formatMemory(memMb))
@@ -176,7 +177,7 @@ struct ContentView: View {
 
             // Percentage in the center
             Text("\(percent)%")
-                .font(.system(size: 32, weight: .heavy, design: .monospaced))
+                .font(.system(size: 52, weight: .heavy, design: .monospaced))
                 .foregroundColor(.white)
         }
     }
@@ -197,7 +198,7 @@ struct ContentView: View {
                         ForEach(serverHistoricalData) { dataPoint in
                             LineMark(
                                 x: .value("Time", dataPoint.timestamp),
-                                y: .value("Watts", dataPoint.watts)
+                                y: .value("Log Watts", log10(max(dataPoint.watts, 1)))
                             )
                             .foregroundStyle(by: .value("Server", dataPoint.server))
                             .interpolationMethod(.catmullRom)
@@ -215,12 +216,16 @@ struct ContentView: View {
                         }
                     }
                     .chartYAxis {
-                        AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in
+                        AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { value in
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 4]))
                                 .foregroundStyle(Color.gray.opacity(0.2))
-                            AxisValueLabel()
-                                .font(.system(size: 18, weight: .medium, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.4))
+                            AxisValueLabel {
+                                if let logVal = value.as(Double.self) {
+                                    Text("\(Int(pow(10, logVal)))W")
+                                        .font(.system(size: 18, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.4))
+                                }
+                            }
                         }
                     }
                     .chartLegend(.hidden)
