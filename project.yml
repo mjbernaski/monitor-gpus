@@ -1,0 +1,176 @@
+name: GPUMonitor
+options:
+  bundleIdPrefix: com.gpumonitor
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+    watchOS: "10.0"
+    tvOS: "17.0"
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+
+schemes:
+  GPUMonitor-macOS:
+    build:
+      targets:
+        GPUMonitor-macOS: all
+  GPUMonitor-iOS:
+    build:
+      targets:
+        GPUMonitor-iOS: all
+  GPUMonitor-watchOS:
+    build:
+      targets:
+        GPUMonitor-watchOS: all
+  GPUMonitor-tvOS:
+    build:
+      targets:
+        GPUMonitor-tvOS: all
+  GPUMonitorWidgetApp:
+    build:
+      targets:
+        GPUMonitorWidgetApp: all
+  gpu-cli:
+    build:
+      targets:
+        gpu-cli: all
+
+targets:
+
+  # ──────────────────────────────────────────────
+  # macOS App
+  # ──────────────────────────────────────────────
+  GPUMonitor-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - Shared
+      - Platforms/macOS/Views
+    resources:
+      - servers.json
+      - path: Platforms/macOS/Assets.xcassets
+        optional: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.macos
+      PRODUCT_NAME: GPU Monitor
+      INFOPLIST_FILE: Platforms/macOS/Info.plist
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      COMBINE_HIDPI_IMAGES: true
+
+  # ──────────────────────────────────────────────
+  # iOS App
+  # ──────────────────────────────────────────────
+  GPUMonitor-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - Shared
+      - Platforms/iOS/Views
+    resources:
+      - servers.json
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
+      PRODUCT_NAME: GPU Monitor
+      INFOPLIST_FILE: Platforms/iOS/Info.plist
+      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+      TARGETED_DEVICE_FAMILY: "1,2"
+      SUPPORTS_MACCATALYST: false
+
+  # ──────────────────────────────────────────────
+  # watchOS App
+  # ──────────────────────────────────────────────
+  GPUMonitor-watchOS:
+    type: application
+    platform: watchOS
+    sources:
+      - Shared
+      - Platforms/watchOS/Views
+    resources:
+      - servers.json
+      - Platforms/watchOS/Assets.xcassets
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.watch
+      PRODUCT_NAME: GPU Monitor
+      INFOPLIST_FILE: Platforms/watchOS/Info.plist
+      WATCHOS_DEPLOYMENT_TARGET: "10.0"
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      SKIP_INSTALL: false
+      SUPPORTS_MACCATALYST: false
+
+  # ──────────────────────────────────────────────
+  # tvOS App
+  # ──────────────────────────────────────────────
+  GPUMonitor-tvOS:
+    type: application
+    platform: tvOS
+    sources:
+      - Shared
+      - Platforms/tvOS/Views
+    resources:
+      - servers.json
+      - Platforms/tvOS/Assets.xcassets
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.tvos
+      PRODUCT_NAME: GPU Monitor
+      INFOPLIST_FILE: Platforms/tvOS/Info.plist
+      TVOS_DEPLOYMENT_TARGET: "17.0"
+
+  # ──────────────────────────────────────────────
+  # macOS Widget Host App
+  # ──────────────────────────────────────────────
+  GPUMonitorWidgetApp:
+    type: application
+    platform: macOS
+    sources:
+      - Widget/App
+    resources:
+      - servers.json
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.widget
+      PRODUCT_NAME: GPU Monitor Widget
+      INFOPLIST_FILE: Widget/App/Info.plist
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      COMBINE_HIDPI_IMAGES: true
+    entitlements:
+      path: Widget/App/GPUMonitorWidgetApp.entitlements
+    dependencies:
+      - target: GPUMonitorWidgetExtension
+
+  # ──────────────────────────────────────────────
+  # macOS Widget Extension
+  # ──────────────────────────────────────────────
+  GPUMonitorWidgetExtension:
+    type: extensionkit-extension
+    platform: macOS
+    sources:
+      - Widget/Extension
+    resources:
+      - servers.json
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.widget.extension
+      PRODUCT_NAME: GPUMonitorWidgetExtension
+      INFOPLIST_FILE: Widget/Extension/Info.plist
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      SKIP_INSTALL: true
+      LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks"
+    entitlements:
+      path: Widget/Extension/GPUMonitorWidgetExtension.entitlements
+
+  # ──────────────────────────────────────────────
+  # CLI Tool
+  # ──────────────────────────────────────────────
+  gpu-cli:
+    type: tool
+    platform: macOS
+    sources:
+      - CLI
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.cli
+      PRODUCT_NAME: gpu-cli
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
