@@ -1,13 +1,14 @@
 {
-  "images" : [
+  "images": [
     {
-      "idiom" : "tv",
-      "scale" : "1x",
-      "size" : "400x240"
+      "idiom": "tv",
+      "scale": "1x",
+      "size": "400x240",
+      "filename": "Content.png"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }

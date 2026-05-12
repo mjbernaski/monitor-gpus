@@ -52,16 +52,15 @@ targets:
     sources:
       - Shared
       - Platforms/macOS/Views
-    resources:
       - servers.json
-      - path: Platforms/macOS/Assets.xcassets
-        optional: true
+      - Platforms/macOS/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.macos
       PRODUCT_NAME: GPU Monitor
       INFOPLIST_FILE: Platforms/macOS/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       COMBINE_HIDPI_IMAGES: true
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   # ──────────────────────────────────────────────
   # iOS App
@@ -72,8 +71,8 @@ targets:
     sources:
       - Shared
       - Platforms/iOS/Views
-    resources:
       - servers.json
+      - Platforms/iOS/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
       PRODUCT_NAME: GPU Monitor
@@ -81,6 +80,7 @@ targets:
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
       TARGETED_DEVICE_FAMILY: "1,2"
       SUPPORTS_MACCATALYST: false
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   # ──────────────────────────────────────────────
   # watchOS App
@@ -91,7 +91,6 @@ targets:
     sources:
       - Shared
       - Platforms/watchOS/Views
-    resources:
       - servers.json
       - Platforms/watchOS/Assets.xcassets
     settings:
@@ -112,7 +111,6 @@ targets:
     sources:
       - Shared
       - Platforms/tvOS/Views
-    resources:
       - servers.json
       - Platforms/tvOS/Assets.xcassets
     settings:
@@ -120,6 +118,7 @@ targets:
       PRODUCT_NAME: GPU Monitor
       INFOPLIST_FILE: Platforms/tvOS/Info.plist
       TVOS_DEPLOYMENT_TARGET: "17.0"
+      ASSETCATALOG_COMPILER_APPICON_NAME: "App Icon"
 
   # ──────────────────────────────────────────────
   # macOS Widget Host App
@@ -129,7 +128,6 @@ targets:
     platform: macOS
     sources:
       - Widget/App
-    resources:
       - servers.json
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.widget
@@ -150,7 +148,6 @@ targets:
     platform: macOS
     sources:
       - Widget/Extension
-    resources:
       - servers.json
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.widget.extension

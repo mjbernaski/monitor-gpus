@@ -27,6 +27,8 @@ class GPUMonitorViewModel: ObservableObject {
     private var timer: Timer?
     private var isFetching = false  // Prevent concurrent fetches
     private var fetchTask: Task<Void, Never>?  // Track current fetch task
+    private var previousTotalWattage: Double?
+    private let wattageChangeThreshold: Double = 5.0
 
     var totalWattage: Double {
         serverStatuses.reduce(0) { $0 + $1.totalWattage }
@@ -101,6 +103,20 @@ class GPUMonitorViewModel: ObservableObject {
             await LoggingService.shared.log(statuses: statuses)
         }
         #endif
+
+        // Play sound on significant wattage change
+        let currentTotal = statuses.reduce(0.0) { $0 + $1.totalWattage }
+        if let previous = previousTotalWattage, !statuses.isEmpty {
+            let delta = currentTotal - previous
+            if delta > wattageChangeThreshold {
+                SoundService.shared.playUpSound()
+            } else if delta < -wattageChangeThreshold {
+                SoundService.shared.playDownSound()
+            }
+        }
+        if !statuses.isEmpty {
+            previousTotalWattage = currentTotal
+        }
 
         let timestamp = Date()
         var newDataPoints: [WattageDataPoint] = []
