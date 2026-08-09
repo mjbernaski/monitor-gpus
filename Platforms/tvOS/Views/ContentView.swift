@@ -7,7 +7,7 @@ struct ContentView: View {
     private let serverColors: [Color] = [.blue, .green, .orange]
 
     // Preferred display order — hostnames containing these prefixes are sorted first
-    private let serverOrder = ["vengeance", "9a96", "96c6"]
+    private let serverOrder = ["vengeance", "spark-1", "spark-2", "9a96", "96c6"]
 
     /// Servers sorted in preferred display order
     private var orderedStatuses: [GPUStatus] {
@@ -44,7 +44,7 @@ struct ContentView: View {
 
     private var headerBar: some View {
         HStack {
-            Text("GPU MONITOR")
+            Text("WATTS")
                 .font(.system(size: 42, weight: .heavy, design: .monospaced))
                 .foregroundColor(.white)
 
@@ -117,10 +117,34 @@ struct ContentView: View {
                     .foregroundColor(colorForWattage(status.totalWattage))
             }
 
+            if let workload = vengeanceWorkload(for: status) {
+                HStack(spacing: 10) {
+                    Image(systemName: workload.symbol)
+                    Text(workload.label)
+                }
+                .font(.system(size: 24, weight: .heavy, design: .monospaced))
+                .foregroundColor(workload.color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(workload.color.opacity(0.13))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(workload.color.opacity(0.45), lineWidth: 2)
+                        )
+                )
+                .accessibilityLabel("Vengeance workload: \(workload.label)")
+            }
+
+            if let processes = status.topProcesses, !processes.isEmpty {
+                processPanel(processes)
+            }
+
             // GPU rings
             HStack(spacing: 12) {
                 ForEach(status.gpus, id: \.gpuId) { gpu in
-                    gpuRingCard(gpu: gpu)
+                    gpuRingCard(gpu: gpu, server: status.hostname)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -140,7 +164,45 @@ struct ContentView: View {
         .focusable()
     }
 
-    private func gpuRingCard(gpu: GPU) -> some View {
+    private func processPanel(_ processes: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("TOP GPU PROCESSES")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.white.opacity(0.45))
+
+            HStack(spacing: 8) {
+                ForEach(Array(processes.prefix(3).enumerated()), id: \.offset) { index, process in
+                    HStack(spacing: 6) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 15, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.black)
+                            .frame(width: 24, height: 24)
+                            .background(Color.purple, in: Circle())
+
+                        Text(process)
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.85))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.55)
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9)
+                            .strokeBorder(Color.purple.opacity(0.30), lineWidth: 1.5)
+                    )
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).joined(separator: ", "))")
+    }
+
+    private func gpuRingCard(gpu: GPU, server: String) -> some View {
         VStack(spacing: 8) {
             Text("GPU \(gpu.gpuId)")
                 .font(.system(size: 20, weight: .bold))
@@ -152,11 +214,92 @@ struct ContentView: View {
                 .aspectRatio(1, contentMode: .fit)
                 .padding(8)
 
-            if let memMb = gpu.memoryFreeMb {
-                Text(formatMemory(memMb))
-                    .font(.system(size: 18, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.4))
+            memoryPanel(gpu: gpu, server: server)
+        }
+    }
+
+    @ViewBuilder
+    private func memoryPanel(gpu: GPU, server: String) -> some View {
+        if let memMb = gpu.memoryFreeMb {
+            let history = memoryHistory(server: server, gpuId: gpu.gpuId)
+            let domain = memoryDomain(for: history)
+
+            VStack(spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(memoryLabel(for: server))
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white.opacity(0.5))
+                        Text(formatMemory(memMb))
+                            .font(.system(size: 36, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.cyan)
+                            .contentTransition(.numericText())
+                    }
+
+                    Spacer(minLength: 6)
+
+                    if let low = history.map(\.freeMb).min() {
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text("ROLLING LOW")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white.opacity(0.35))
+                            Text(formatMemoryCompact(low))
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.65))
+                        }
+                    }
+                }
+
+                if history.count > 1 {
+                    Chart(history) { point in
+                        AreaMark(
+                            x: .value("Time", point.timestamp),
+                            yStart: .value("Chart minimum", domain.lowerBound),
+                            yEnd: .value("Free memory", point.freeMb)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.cyan.opacity(0.28), .cyan.opacity(0.02)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
+                        LineMark(
+                            x: .value("Time", point.timestamp),
+                            y: .value("Free memory", point.freeMb)
+                        )
+                        .foregroundStyle(.cyan)
+                        .lineStyle(StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .interpolationMethod(.catmullRom)
+                    }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .chartYScale(domain: domain)
+                    .frame(height: 70)
+                    .accessibilityLabel("\(memoryLabel(for: server).capitalized) history")
+                } else {
+                    Text("COLLECTING HISTORY…")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white.opacity(0.3))
+                        .frame(height: 70)
+                }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.cyan.opacity(0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.cyan.opacity(0.25), lineWidth: 2)
+                    )
+            )
+        } else {
+            Text("GPU MEMORY NOT REPORTED")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white.opacity(0.25))
+                .frame(height: 34)
         }
     }
 
@@ -271,14 +414,58 @@ struct ContentView: View {
         }
     }
 
+    private func vengeanceWorkload(for status: GPUStatus) -> (label: String, symbol: String, color: Color)? {
+        guard status.hostname.lowercased().contains("vengeance") || status.ipAddress == "192.168.6.40" else {
+            return nil
+        }
+
+        if status.totalWattage > 500 {
+            return ("CRANKING PARALLEL MATH", "bolt.fill", .orange)
+        }
+
+        if (100...200).contains(status.totalWattage) {
+            return ("MOVING MEMORY", "arrow.left.arrow.right", .cyan)
+        }
+
+        return nil
+    }
+
+    private func memoryHistory(server: String, gpuId: Int) -> [MemoryDataPoint] {
+        viewModel.memoryHistoricalData.filter { point in
+            point.server == server && point.gpuId == gpuId
+        }
+    }
+
+    private func memoryLabel(for server: String) -> String {
+        server.lowercased().contains("spark") ? "FREE UNIFIED MEMORY" : "FREE GPU MEMORY"
+    }
+
+    private func memoryDomain(for history: [MemoryDataPoint]) -> ClosedRange<Int> {
+        guard let low = history.map(\.freeMb).min(),
+              let high = history.map(\.freeMb).max() else {
+            return 0...1024
+        }
+
+        // Keep small changes visible while maintaining enough scale that normal
+        // polling noise does not make the graph look alarming.
+        let padding = max((high - low) / 5, 256)
+        return max(0, low - padding)...(high + padding)
+    }
+
     private func formatMemory(_ mb: Int) -> String {
         if mb >= 1024 {
-            return String(format: "%.1f GB free", Double(mb) / 1024.0)
+            return String(format: "%.1f GB", Double(mb) / 1024.0)
         }
-        return "\(mb) MB free"
+        return "\(mb) MB"
+    }
+
+    private func formatMemoryCompact(_ mb: Int) -> String {
+        mb >= 1024 ? String(format: "%.1f GB", Double(mb) / 1024.0) : "\(mb) MB"
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

@@ -73,11 +73,17 @@ actor GPUServiceCLI {
     let servers: [String]
     let port: Int
     let endpoint: String
+    private let urlSession: URLSession
 
     init(servers: [String], port: Int, endpoint: String) {
         self.servers = servers
         self.port = port
         self.endpoint = endpoint
+
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 5.0
+        configuration.timeoutIntervalForResource = 10.0
+        self.urlSession = URLSession(configuration: configuration)
     }
 
     func fetchAllServers() async -> [GPUStatus] {
@@ -100,17 +106,28 @@ actor GPUServiceCLI {
 
     private func fetchStatus(from server: String) async -> GPUStatus? {
         guard let url = URL(string: "http://\(server):\(port)\(endpoint)") else {
+            fputs("Invalid URL for server: \(server)\n", stderr)
             return nil
         }
 
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await urlSession.data(from: url)
+            if let httpResponse = response as? HTTPURLResponse,
+               !(200...299).contains(httpResponse.statusCode) {
+                fputs("HTTP error from \(server): \(httpResponse.statusCode)\n", stderr)
+                return nil
+            }
+
             var status = try JSONDecoder().decode(GPUStatus.self, from: data)
             status.ipAddress = server
             return status
+        } catch let error as URLError {
+            fputs("Network error from \(server): \(error.localizedDescription) (\(error.code.rawValue))\n", stderr)
         } catch {
-            return nil
+            fputs("Error decoding response from \(server): \(error)\n", stderr)
         }
+
+        return nil
     }
 }
 

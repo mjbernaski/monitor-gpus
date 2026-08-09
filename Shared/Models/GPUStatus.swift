@@ -7,6 +7,7 @@ struct GPUStatus: Codable, Identifiable {
     let timestamp: String
     let gpuCount: Int
     let gpus: [GPU]
+    let topProcesses: [String]?
 
     enum CodingKeys: String, CodingKey {
         case hostname
@@ -14,6 +15,7 @@ struct GPUStatus: Codable, Identifiable {
         case timestamp
         case gpuCount = "gpu_count"
         case gpus
+        case topProcesses = "top_processes"
     }
 
     var totalWattage: Double {
@@ -40,4 +42,12 @@ struct WattageDataPoint: Identifiable {
     let timestamp: Date
     let server: String
     let watts: Double
+}
+
+struct MemoryDataPoint: Identifiable {
+    let id = UUID()
+    let timestamp: Date
+    let server: String
+    let gpuId: Int
+    let freeMb: Int
 }

@@ -11,9 +11,10 @@ options:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: DQPDVF6ZSY
 
 schemes:
   GPUMonitor-macOS:
@@ -56,7 +57,7 @@ targets:
       - Platforms/macOS/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.macos
-      PRODUCT_NAME: GPU Monitor
+      PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/macOS/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       COMBINE_HIDPI_IMAGES: true
@@ -77,7 +78,7 @@ targets:
       - Platforms/iOS/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
-      PRODUCT_NAME: GPU Monitor
+      PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/iOS/Info.plist
       IPHONEOS_DEPLOYMENT_TARGET: "17.0"
       TARGETED_DEVICE_FAMILY: "1,2"
@@ -97,7 +98,7 @@ targets:
       - Platforms/watchOS/Assets.xcassets
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.watch
-      PRODUCT_NAME: GPU Monitor
+      PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/watchOS/Info.plist
       WATCHOS_DEPLOYMENT_TARGET: "10.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -116,8 +117,8 @@ targets:
       - servers.json
       - Platforms/tvOS/Assets.xcassets
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.tvos
-      PRODUCT_NAME: GPU Monitor
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
+      PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/tvOS/Info.plist
       TVOS_DEPLOYMENT_TARGET: "17.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: "App Icon"
@@ -133,7 +134,7 @@ targets:
       - servers.json
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.widget
-      PRODUCT_NAME: GPU Monitor Widget
+      PRODUCT_NAME: GPU Wattage Meters Widget
       INFOPLIST_FILE: Widget/App/Info.plist
       MACOSX_DEPLOYMENT_TARGET: "14.0"
       COMBINE_HIDPI_IMAGES: true

@@ -7,7 +7,7 @@ struct ContentView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.blue)
             
-            Text("GPU Monitor Widget")
+            Text("Watts Widget")
                 .font(.title)
                 .fontWeight(.semibold)
             
@@ -25,7 +25,7 @@ struct ContentView: View {
                 
                 Text("1. Right-click on your Desktop")
                 Text("2. Select \"Edit Widgets...\"")
-                Text("3. Find \"GPU Monitor\" and drag it to your Desktop")
+                Text("3. Find \"Watts\" and drag it to your Desktop")
             }
             .font(.callout)
             .foregroundColor(.secondary)

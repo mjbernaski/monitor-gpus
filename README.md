@@ -1,89 +1,110 @@
-# GPU Wattage Monitor
+# GPU Wattage Meters
 
-A macOS app that monitors GPU wattage from three servers in real-time.
+Native Apple-platform GPU power monitor for two DGX Spark systems and the Vengeance 5090 workstation.
 
-## Features
+## Current Servers
 
-- Monitors GPU wattage from three servers (192.168.5.40, 192.168.5.56, 192.168.6.40)
-- Updates every 5 seconds automatically
-- Displays current wattage per server
-- Shows total wattage across all servers
-- Line chart visualization showing wattage trends over time
-- Color-coded wattage indicators (green/yellow/orange/red)
+The shared `servers.json` config monitors:
 
-## Requirements
+- `192.168.5.40:9999` - `spark-9a96`
+- `192.168.5.46:9999` - `spark-96c6`
+- `192.168.6.40:9999` - `VENGEANCE`
 
-- macOS 14.0 or later
-- Xcode 15.0 or later
-- Swift 5.9 or later
+Each server is expected to expose `GET /gpu-status`.
 
-## Building and Running
+## Build And Run
 
-### Option 1: Using Xcode
+Open the checked-in Xcode project:
 
-1. Open the project in Xcode:
-   ```bash
-   open Package.swift
-   ```
-
-2. Wait for Xcode to resolve dependencies
-
-3. Select "My Mac" as the target
-
-4. Press `Cmd+R` to build and run
-
-### Option 2: Using Swift CLI
-
-Build and run from the command line:
 ```bash
-swift run
+open GPUMonitor.xcodeproj
 ```
 
-Build only:
+Then choose the `GPUMonitor-macOS` scheme and run it on `My Mac`.
+
+Command-line build:
+
 ```bash
-swift build
+xcodebuild -project GPUMonitor.xcodeproj \
+  -scheme GPUMonitor-macOS \
+  -configuration Debug \
+  -derivedDataPath build/DerivedData \
+  build
 ```
 
-## Architecture
+CLI status check:
 
-```
-Sources/
-├── GPUMonitorApp.swift          # Main app entry point
-├── Models/
-│   └── GPUStatus.swift          # Data models
-├── Services/
-│   └── GPUService.swift         # Network service
-├── ViewModels/
-│   └── GPUMonitorViewModel.swift # State management
-└── Views/
-    └── ContentView.swift        # Main UI
+```bash
+xcodebuild -project GPUMonitor.xcodeproj \
+  -scheme gpu-cli \
+  -configuration Debug \
+  -derivedDataPath build/DerivedData \
+  build
+
+build/DerivedData/Build/Products/Debug/gpu-cli
 ```
 
-## Server Configuration
+## Project Layout
 
-The app is configured to monitor these servers:
-- 192.168.5.40:9999
-- 192.168.5.56:9999
-- 192.168.6.40:9999
+```text
+Shared/
+  App/GPUMonitorApp.swift
+  Models/GPUStatus.swift
+  Services/GPUService.swift
+  Services/LoggingService.swift
+  Services/SoundService.swift
+  ViewModels/GPUMonitorViewModel.swift
+Platforms/
+  macOS/Views/ContentView.swift
+  iOS/Views/ContentView.swift
+  watchOS/Views/ContentView.swift
+  tvOS/Views/ContentView.swift
+CLI/main.swift
+servers.json
+project.yml
+GPUMonitor.xcodeproj
+```
 
-To modify the server list, edit `Sources/Services/GPUService.swift`.
+`project.yml` is the XcodeGen source of truth if you need to regenerate the Xcode project.
 
-## API Response Format
+## Configuration
 
-The app expects the `/gpu-status` endpoint to return JSON in this format:
+Edit `servers.json` to add or remove GPU servers:
+
+```json
+{
+  "servers": ["192.168.5.40", "192.168.5.46", "192.168.6.40"],
+  "port": 9999,
+  "endpoint": "/gpu-status"
+}
+```
+
+## API Response
 
 ```json
 {
   "hostname": "spark-9a96",
-  "timestamp": "2025-11-18T18:07:56.207Z",
+  "timestamp": "2026-07-21T19:29:40.293Z",
   "gpu_count": 1,
   "gpus": [
     {
       "gpu_id": 0,
-      "power_draw_watts": 3.7,
+      "power_draw_watts": 13.31,
       "memory_free_mb": null,
       "utilization_percent": 0
     }
   ]
 }
 ```
+
+## Troubleshooting
+
+Direct endpoint check:
+
+```bash
+curl -s http://192.168.5.40:9999/gpu-status
+curl -s http://192.168.5.46:9999/gpu-status
+curl -s http://192.168.6.40:9999/gpu-status
+```
+
+If the app builds but shows no servers, first confirm those `curl` commands work from the Mac and that the Mac is on the same network as the GPU machines.

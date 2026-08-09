@@ -1,70 +1,54 @@
-# GPU Wattage Monitor - Platform Guide
+# GPU Wattage Meters - Platform Guide
 
-This repository contains GPU monitoring applications for both macOS and iOS/iPadOS.
+This repository is a single Xcode project with shared monitoring code and platform-specific SwiftUI views.
 
-## 📦 What's Included
+## Schemes
 
-- **macOS Version**: Swift Package in the root directory
-- **iOS/iPadOS Version**: Xcode project in `GPUMonitorIOS/` directory
+- `GPUMonitor-macOS` - native macOS app
+- `GPUMonitor-iOS` - iPhone/iPad app
+- `GPUMonitor-watchOS` - watchOS app
+- `GPUMonitor-tvOS` - tvOS dashboard
+- `GPUMonitorWidgetApp` - macOS widget host app
+- `GPUMonitorWidgetExtension` - macOS widget extension
+- `gpu-cli` - command-line status checker
 
-## 🖥️ macOS Version
+## macOS
 
-### Running on macOS
-
-```bash
-# Build and run
-swift build -c release
-.build/release/GPUMonitor
-
-# Or run directly
-swift run
-```
-
-### Features
-- Native macOS window with hidden title bar
-- Fixed window size optimized for desktop
-- Finder integration for log files
-- Menu bar controls
-
-## 📱 iOS/iPadOS Version
-
-### Quick Setup
-
-The easiest way to get started with the iOS version:
+Run from Xcode:
 
 ```bash
-cd GPUMonitorIOS
-./setup.sh
+open GPUMonitor.xcodeproj
 ```
 
-This script will:
-1. Check for/install xcodegen
-2. Generate the Xcode project
-3. Open it in Xcode
+Select `GPUMonitor-macOS`, destination `My Mac`, then run.
 
-Alternatively, see `GPUMonitorIOS/README.md` for manual setup instructions.
+Build from the command line:
 
-### Features
-- Responsive layout for iPhone and iPad
-- Portrait and landscape support
-- iOS share sheet for log files
-- Touch-optimized controls
-- Adaptive UI based on device size
+```bash
+xcodebuild -project GPUMonitor.xcodeproj \
+  -scheme GPUMonitor-macOS \
+  -configuration Debug \
+  -derivedDataPath build/DerivedData \
+  build
+```
 
-## 🔧 Shared Features
+## CLI
 
-Both versions include:
-- Real-time GPU wattage monitoring from remote servers
-- Live charts showing power consumption over time
-- Multiple server monitoring
-- Configurable polling interval (1-30 seconds)
-- Dark mode support
-- CSV logging to disk
-- Server status indicators
+The CLI is useful for verifying server connectivity without launching the app:
 
-## ⚙️ Configuration
+```bash
+xcodebuild -project GPUMonitor.xcodeproj \
+  -scheme gpu-cli \
+  -configuration Debug \
+  -derivedDataPath build/DerivedData \
+  build
 
-Both versions use `servers.json` for configuration:
+build/DerivedData/Build/Products/Debug/gpu-cli
+```
+
+## Shared Configuration
+
+All app targets use `servers.json`:
 
 ```json
 {
@@ -74,88 +58,25 @@ Both versions use `servers.json` for configuration:
 }
 ```
 
-Edit this file to add/remove GPU servers or change the endpoint.
+Current expected hosts:
 
-## 📊 Server Requirements
+- `spark-9a96`
+- `spark-96c6`
+- `VENGEANCE`
 
-Your GPU servers need to provide a JSON endpoint with this format:
+## Code Sharing
 
-```json
-{
-  "hostname": "server1",
-  "timestamp": "2025-01-01T12:00:00Z",
-  "gpu_count": 2,
-  "gpus": [
-    {
-      "gpu_id": 0,
-      "power_draw_watts": 150.5,
-      "memory_free_mb": 8192,
-      "utilization_percent": 75
-    }
-  ]
-}
-```
+Shared code lives in `Shared/`:
 
-## 🛠️ Development
+- `Models/` - JSON models and chart data points
+- `Services/` - network fetching, logging, and sound
+- `ViewModels/` - polling and app state
+- `App/` - shared SwiftUI app entry point
 
-### Requirements
-- macOS: Swift 5.9+, macOS 14+
-- iOS: Xcode 15+, iOS 17+
+Platform views live under `Platforms/<platform>/Views/ContentView.swift`.
 
-### Project Structure
-```
-.
-├── Sources/
-│   ├── GPUMonitorApp.swift      # App entry point (cross-platform)
-│   ├── Models/                  # Data models
-│   ├── Services/                # Network & logging services
-│   ├── ViewModels/              # Business logic
-│   └── Views/                   # SwiftUI views
-├── GPUMonitorIOS/               # iOS-specific project
-│   ├── setup.sh                 # Automated setup script
-│   ├── project.yml              # XcodeGen configuration
-│   └── README.md                # iOS-specific instructions
-└── servers.json                 # Server configuration
-```
+## Notes
 
-## 🔄 Code Sharing
-
-The codebase is designed to be cross-platform:
-- Platform-specific code is wrapped in `#if os(macOS)` / `#else` blocks
-- Networking and business logic are fully shared
-- UI adapts automatically to each platform's conventions
-
-## 📝 Notes
-
-### Network Access
-- Both apps require network access to your GPU servers
-- Make sure your device is on the same network as the servers
-- For iOS, the Info.plist includes `NSAllowsArbitraryLoads` to allow HTTP connections
-
-### Logs
-- **macOS**: Logs saved to `~/Documents/GPUMonitorLogs/`
-- **iOS**: Logs saved to app's Documents directory (accessible via Files app or iTunes)
-
-### Background Monitoring
-- Currently, both apps only monitor while in the foreground
-- Background monitoring could be added with appropriate permissions
-
-## 🐛 Troubleshooting
-
-### Can't connect to servers
-- Verify servers are accessible: `ping <server-ip>`
-- Check firewall settings
-- Ensure port 9999 (or your custom port) is open
-
-### iOS build errors
-- Make sure Xcode 15+ is installed
-- Verify iOS deployment target is set to 17.0+
-- Clean build folder: Cmd+Shift+K in Xcode
-
-### macOS build errors
-- Ensure you're running macOS 14+
-- Update Xcode Command Line Tools: `xcode-select --install`
-
-## 📄 License
-
-Copyright © 2025. All rights reserved.
+- The app targets allow local HTTP through `NSAppTransportSecurity` in their platform plists.
+- Logs for macOS and iOS are written under `GPUMonitorLogs` in the user/app Documents directory.
+- `project.yml` is the XcodeGen source file if the checked-in `GPUMonitor.xcodeproj` needs to be regenerated.

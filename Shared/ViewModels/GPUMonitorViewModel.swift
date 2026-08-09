@@ -5,6 +5,7 @@ import SwiftUI
 class GPUMonitorViewModel: ObservableObject {
     @Published var serverStatuses: [GPUStatus] = []
     @Published var historicalData: [WattageDataPoint] = []
+    @Published var memoryHistoricalData: [MemoryDataPoint] = []
     @Published var isLoading = false
 
     #if os(watchOS)
@@ -120,6 +121,7 @@ class GPUMonitorViewModel: ObservableObject {
 
         let timestamp = Date()
         var newDataPoints: [WattageDataPoint] = []
+        var newMemoryDataPoints: [MemoryDataPoint] = []
         var totalWatts = 0.0
 
         for status in statuses {
@@ -130,6 +132,19 @@ class GPUMonitorViewModel: ObservableObject {
             )
             newDataPoints.append(dataPoint)
             totalWatts += status.totalWattage
+
+            for gpu in status.gpus {
+                if let freeMb = gpu.memoryFreeMb {
+                    newMemoryDataPoints.append(
+                        MemoryDataPoint(
+                            timestamp: timestamp,
+                            server: status.hostname,
+                            gpuId: gpu.gpuId,
+                            freeMb: freeMb
+                        )
+                    )
+                }
+            }
         }
 
         // Add total data point (not on watchOS)
@@ -146,6 +161,7 @@ class GPUMonitorViewModel: ObservableObject {
 
         // Append new data points
         historicalData.append(contentsOf: newDataPoints)
+        memoryHistoricalData.append(contentsOf: newMemoryDataPoints)
 
         // Trim historical data
         #if os(watchOS)
@@ -164,5 +180,14 @@ class GPUMonitorViewModel: ObservableObject {
                 historicalData.removeFirst(historicalData.count - maxDataPoints)
             }
         }
+
+        // Keep the same rolling history length independently for each GPU.
+        // Servers that omit the memory field intentionally create no memory series.
+        let memorySeries = Dictionary(grouping: memoryHistoricalData) {
+            "\($0.server):\($0.gpuId)"
+        }
+        memoryHistoricalData = memorySeries.values
+            .flatMap { $0.suffix(maxDataPoints) }
+            .sorted { $0.timestamp < $1.timestamp }
     }
 }

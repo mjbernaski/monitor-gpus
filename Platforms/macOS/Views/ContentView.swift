@@ -25,7 +25,7 @@ struct ContentView: View {
 
     private var compactHeaderBar: some View {
         HStack(spacing: 8) {
-            Text("GPU Monitor")
+            Text("Watts")
                 .font(.system(size: 12, weight: .semibold))
 
             Spacer()
@@ -176,6 +176,8 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

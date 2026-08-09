@@ -57,7 +57,7 @@ struct GPUMonitorWidgetEntryView: View {
             HStack {
                 Image(systemName: "cpu")
                     .foregroundColor(.blue)
-                Text("GPU Monitor")
+                Text("Watts")
                     .font(.caption)
                     .fontWeight(.semibold)
             }
@@ -89,7 +89,7 @@ struct GPUMonitorWidgetEntryView: View {
                 HStack {
                     Image(systemName: "cpu")
                         .foregroundColor(.blue)
-                    Text("GPU Monitor")
+                    Text("Watts")
                         .font(.caption)
                         .fontWeight(.semibold)
                 }
@@ -143,7 +143,7 @@ struct GPUMonitorWidgetEntryView: View {
             HStack {
                 Image(systemName: "cpu")
                     .foregroundColor(.blue)
-                Text("GPU Monitor")
+                Text("Watts")
                     .font(.headline)
                     .fontWeight(.semibold)
                 Spacer()
@@ -230,7 +230,7 @@ struct GPUMonitorWidgetBundle: Widget {
         StaticConfiguration(kind: kind, provider: GPUMonitorProvider()) { entry in
             GPUMonitorWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("GPU Monitor")
+        .configurationDisplayName("Watts")
         .description("Monitor GPU power consumption across your servers.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
