@@ -114,6 +114,10 @@ struct ContentView: View {
                     .overlay(Capsule().strokeBorder(workload.color.opacity(0.4), lineWidth: 1.5))
             }
 
+            if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                notePanel(note.text, color: color)
+            }
+
             if let processes = status.topProcesses, !processes.isEmpty {
                 processPanel(processes)
             }
@@ -128,7 +132,25 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(color.opacity(0.42), lineWidth: 2))
     }
 
-    private func processPanel(_ processes: [String]) -> some View {
+    private func notePanel(_ text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: "note.text")
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundColor(.white.opacity(0.9))
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.11), in: RoundedRectangle(cornerRadius: 11))
+        .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(color.opacity(0.3), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Status note: \(text)")
+    }
+
+    private func processPanel(_ processes: [GPUProcess]) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Label("TOP GPU PROCESSES", systemImage: "cpu")
                 .font(.caption.weight(.bold))
@@ -142,12 +164,20 @@ struct ContentView: View {
                         .frame(width: 25, height: 25)
                         .background(Color.purple, in: Circle())
 
-                    Text(process)
+                    Text(process.displayName)
                         .font(.system(.subheadline, design: .monospaced).weight(.semibold))
                         .lineLimit(1)
+                        .truncationMode(.head)
                         .minimumScaleFactor(0.65)
 
-                    Spacer(minLength: 0)
+                    Spacer(minLength: 8)
+
+                    if let memory = process.memoryLabel {
+                        Text(memory)
+                            .font(.system(.caption, design: .monospaced).weight(.semibold))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -160,7 +190,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).joined(separator: ", "))")
+        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).map(\.displayName).joined(separator: ", "))")
     }
 
     private func gpuCard(_ gpu: GPU, server: String) -> some View {
@@ -380,11 +410,14 @@ struct ContentView: View {
         guard status.hostname.lowercased().contains("vengeance") || status.ipAddress == "192.168.6.40" else {
             return nil
         }
-        if status.totalWattage > 500 {
-            return ("CRANKING PARALLEL MATH", "bolt.fill", .orange)
+        if status.totalWattage > 400 {
+            return ("Doing Mostly Highly Parallel Math", "bolt.fill", .orange)
         }
-        if (100...200).contains(status.totalWattage) {
-            return ("MOVING MEMORY", "arrow.left.arrow.right", .cyan)
+        if status.totalWattage >= 200 {
+            return ("Mix of Memory and Math", "arrow.triangle.2.circlepath", .purple)
+        }
+        if status.totalWattage >= 100 {
+            return ("Doing Memory Stuff", "arrow.left.arrow.right", .cyan)
         }
         return nil
     }

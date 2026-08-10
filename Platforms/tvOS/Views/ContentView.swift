@@ -137,6 +137,10 @@ struct ContentView: View {
                 .accessibilityLabel("Vengeance workload: \(workload.label)")
             }
 
+            if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                notePanel(note.text, color: color)
+            }
+
             if let processes = status.topProcesses, !processes.isEmpty {
                 processPanel(processes)
             }
@@ -164,7 +168,26 @@ struct ContentView: View {
         .focusable()
     }
 
-    private func processPanel(_ processes: [String]) -> some View {
+    private func notePanel(_ text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "note.text")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(size: 21, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.9))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(color.opacity(0.11), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(color.opacity(0.3), lineWidth: 1.5))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Status note: \(text)")
+    }
+
+    private func processPanel(_ processes: [GPUProcess]) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("TOP GPU PROCESSES")
                 .font(.system(size: 15, weight: .bold))
@@ -179,11 +202,21 @@ struct ContentView: View {
                             .frame(width: 24, height: 24)
                             .background(Color.purple, in: Circle())
 
-                        Text(process)
-                            .font(.system(size: 17, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.85))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.55)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(process.displayName)
+                                .font(.system(size: 17, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.85))
+                                .lineLimit(1)
+                                .truncationMode(.head)
+                                .minimumScaleFactor(0.55)
+
+                            if let memory = process.memoryLabel {
+                                Text(memory)
+                                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.45))
+                                    .lineLimit(1)
+                            }
+                        }
 
                         Spacer(minLength: 0)
                     }
@@ -199,7 +232,7 @@ struct ContentView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).joined(separator: ", "))")
+        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).map(\.displayName).joined(separator: ", "))")
     }
 
     private func gpuRingCard(gpu: GPU, server: String) -> some View {
@@ -307,21 +340,34 @@ struct ContentView: View {
         let fraction = Double(min(percent, 100)) / 100.0
         let ringColor = colorForUtilization(percent)
 
-        return ZStack {
-            // Background track
-            Circle()
-                .stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: 12, lineCap: .round))
+        return GeometryReader { geo in
+            // Scale stroke and label to the ring's actual size so the
+            // percentage always fits inside the circle.
+            let diameter = min(geo.size.width, geo.size.height)
+            let lineWidth = max(6, diameter * 0.075)
+            let inset = lineWidth + diameter * 0.06
+            let fontSize = max(12, diameter * 0.30)
 
-            // Filled arc
-            Circle()
-                .trim(from: 0, to: fraction)
-                .stroke(ringColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                .rotationEffect(.degrees(-90))
+            ZStack {
+                // Background track
+                Circle()
+                    .stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
 
-            // Percentage in the center
-            Text("\(percent)%")
-                .font(.system(size: 52, weight: .heavy, design: .monospaced))
-                .foregroundColor(.white)
+                // Filled arc
+                Circle()
+                    .trim(from: 0, to: fraction)
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+
+                // Percentage in the center
+                Text("\(percent)%")
+                    .font(.system(size: fontSize, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                    .frame(width: max(0, diameter - inset * 2))
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 
@@ -419,12 +465,16 @@ struct ContentView: View {
             return nil
         }
 
-        if status.totalWattage > 500 {
-            return ("CRANKING PARALLEL MATH", "bolt.fill", .orange)
+        if status.totalWattage > 400 {
+            return ("Doing Mostly Highly Parallel Math", "bolt.fill", .orange)
         }
 
-        if (100...200).contains(status.totalWattage) {
-            return ("MOVING MEMORY", "arrow.left.arrow.right", .cyan)
+        if status.totalWattage >= 200 {
+            return ("Mix of Memory and Math", "arrow.triangle.2.circlepath", .purple)
+        }
+
+        if status.totalWattage >= 100 {
+            return ("Doing Memory Stuff", "arrow.left.arrow.right", .cyan)
         }
 
         return nil

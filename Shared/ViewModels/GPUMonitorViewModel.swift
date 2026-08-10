@@ -29,6 +29,7 @@ class GPUMonitorViewModel: ObservableObject {
     private var isFetching = false  // Prevent concurrent fetches
     private var fetchTask: Task<Void, Never>?  // Track current fetch task
     private var previousTotalWattage: Double?
+    private var previousVengeanceWattage: Double?
     private let wattageChangeThreshold: Double = 5.0
 
     var totalWattage: Double {
@@ -107,16 +108,31 @@ class GPUMonitorViewModel: ObservableObject {
 
         // Play sound on significant wattage change
         let currentTotal = statuses.reduce(0.0) { $0 + $1.totalWattage }
+        let vengeanceStatus = statuses.first {
+            $0.hostname.lowercased().contains("vengeance") || $0.ipAddress == "192.168.6.40"
+        }
+        var playedVengeanceTone = false
+
+        if let currentVengeance = vengeanceStatus?.totalWattage,
+           let previousVengeance = previousVengeanceWattage,
+           abs(currentVengeance - previousVengeance) > wattageChangeThreshold {
+            SoundService.shared.playVengeanceTone(wattage: currentVengeance)
+            playedVengeanceTone = true
+        }
+
         if let previous = previousTotalWattage, !statuses.isEmpty {
             let delta = currentTotal - previous
-            if delta > wattageChangeThreshold {
+            if !playedVengeanceTone, delta > wattageChangeThreshold {
                 SoundService.shared.playUpSound()
-            } else if delta < -wattageChangeThreshold {
+            } else if !playedVengeanceTone, delta < -wattageChangeThreshold {
                 SoundService.shared.playDownSound()
             }
         }
         if !statuses.isEmpty {
             previousTotalWattage = currentTotal
+        }
+        if let currentVengeance = vengeanceStatus?.totalWattage {
+            previousVengeanceWattage = currentVengeance
         }
 
         let timestamp = Date()

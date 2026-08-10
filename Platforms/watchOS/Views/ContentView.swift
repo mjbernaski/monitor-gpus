@@ -198,11 +198,14 @@ struct ContentView: View {
         guard status.hostname.lowercased().contains("vengeance") || status.ipAddress == "192.168.6.40" else {
             return nil
         }
-        if status.totalWattage > 500 {
-            return ("PARALLEL MATH", "bolt.fill", .orange)
+        if status.totalWattage > 400 {
+            return ("Doing Mostly Highly Parallel Math", "bolt.fill", .orange)
         }
-        if (100...200).contains(status.totalWattage) {
-            return ("MOVING MEMORY", "arrow.left.arrow.right", .cyan)
+        if status.totalWattage >= 200 {
+            return ("Mix of Memory and Math", "arrow.triangle.2.circlepath", .purple)
+        }
+        if status.totalWattage >= 100 {
+            return ("Doing Memory Stuff", "arrow.left.arrow.right", .cyan)
         }
         return nil
     }

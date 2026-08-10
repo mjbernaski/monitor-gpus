@@ -83,20 +83,31 @@ struct ContentView: View {
     }
 
     private func serverCard(_ status: GPUStatus) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(colorForServer(status.hostname))
-                .frame(width: 5, height: 5)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(colorForServer(status.hostname))
+                    .frame(width: 5, height: 5)
 
-            Text(status.hostname)
-                .font(.system(size: 10, design: .monospaced))
-                .lineLimit(1)
+                Text(status.hostname)
+                    .font(.system(size: 10, design: .monospaced))
+                    .lineLimit(1)
 
-            Spacer()
+                Spacer()
 
-            Text("\(status.totalWattage, specifier: "%.0f")W")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundColor(colorForWattage(status.totalWattage))
+                Text("\(status.totalWattage, specifier: "%.0f")W")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(colorForWattage(status.totalWattage))
+            }
+
+            if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Label(note.text, systemImage: "note.text")
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel("Status note: \(note.text)")
+            }
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)

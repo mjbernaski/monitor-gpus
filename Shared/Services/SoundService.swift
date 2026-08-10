@@ -27,6 +27,18 @@ class SoundService {
         playTone(frequency: 440)
     }
 
+    func playVengeanceTone(wattage: Double) {
+        guard soundEnabled else { return }
+
+        // Ascend from E3 to E5 as power rises from 100 W to 500 W.
+        // Interpolate geometrically so equal wattage steps sound like equal pitch steps.
+        let normalizedWattage = min(max((wattage - 100) / 400, 0), 1)
+        let lowFrequency = 164.81
+        let highFrequency = 659.25
+        let frequency = lowFrequency * pow(highFrequency / lowFrequency, normalizedWattage)
+        playTone(frequency: frequency)
+    }
+
     private func playTone(frequency: Double) {
         let sampleRate = 44100.0
         let sampleCount = Int(sampleRate * toneDuration)
@@ -86,6 +98,11 @@ class SoundService {
     func playDownSound() {
         guard soundEnabled else { return }
         WKInterfaceDevice.current().play(.stop)
+    }
+
+    func playVengeanceTone(wattage: Double) {
+        guard soundEnabled else { return }
+        WKInterfaceDevice.current().play(.notification)
     }
     #endif
 }
