@@ -11,7 +11,7 @@ options:
 settings:
   base:
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "7"
+    CURRENT_PROJECT_VERSION: "16"
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: DQPDVF6ZSY
@@ -76,6 +76,9 @@ targets:
       - Platforms/iOS/Views
       - servers.json
       - Platforms/iOS/Assets.xcassets
+    dependencies:
+      - target: GPUMonitor-watchOS
+        embed: true
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
       PRODUCT_NAME: GPU Wattage Meters
@@ -97,12 +100,12 @@ targets:
       - servers.json
       - Platforms/watchOS/Assets.xcassets
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.watch
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios.watchkitapp
       PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/watchOS/Info.plist
       WATCHOS_DEPLOYMENT_TARGET: "10.0"
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-      SKIP_INSTALL: false
+      SKIP_INSTALL: true
       SUPPORTS_MACCATALYST: false
 
   # ──────────────────────────────────────────────
@@ -117,7 +120,7 @@ targets:
       - servers.json
       - Platforms/tvOS/Assets.xcassets
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.tvos
+      PRODUCT_BUNDLE_IDENTIFIER: com.gpumonitor.ios
       PRODUCT_NAME: GPU Wattage Meters
       INFOPLIST_FILE: Platforms/tvOS/Info.plist
       TVOS_DEPLOYMENT_TARGET: "17.0"

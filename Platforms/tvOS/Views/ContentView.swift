@@ -50,14 +50,28 @@ struct ContentView: View {
 
             Spacer()
 
-            // Total wattage - the single most important number
-            HStack(spacing: 16) {
-                Text("TOTAL")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.white.opacity(0.5))
-                Text("\(viewModel.totalWattage, specifier: "%.0f")W")
-                    .font(.system(size: 64, weight: .heavy, design: .monospaced))
-                    .foregroundColor(colorForWattage(viewModel.totalWattage))
+            HStack(spacing: 34) {
+                HStack(spacing: 16) {
+                    Text("TOTAL")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white.opacity(0.5))
+                    Text("\(viewModel.totalWattage, specifier: "%.0f")W")
+                        .font(.system(size: 64, weight: .heavy, design: .monospaced))
+                        .foregroundColor(colorForWattage(viewModel.totalWattage))
+                }
+
+                if viewModel.totalMemoryCapacityGb > 0 {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("MEMORY CAPACITY")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white.opacity(0.45))
+                        Text("\(viewModel.totalMemoryCapacityGb) GB")
+                            .font(.system(size: 32, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.cyan)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Total memory capacity \(viewModel.totalMemoryCapacityGb) gigabytes")
+                }
             }
 
             Spacer()
@@ -111,10 +125,18 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
+                if let capacity = status.memoryCapacityLabel {
+                    Text(capacity)
+                        .font(.system(size: 16, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.cyan.opacity(0.8))
+                        .lineLimit(1)
+                }
                 Spacer()
                 Text("\(status.totalWattage, specifier: "%.0f")W")
-                    .font(.system(size: 76, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 56, weight: .heavy, design: .monospaced))
                     .foregroundColor(colorForWattage(status.totalWattage))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
 
             if let workload = vengeanceWorkload(for: status) {
@@ -145,15 +167,15 @@ struct ContentView: View {
                 processPanel(processes)
             }
 
-            // GPU rings
+            Spacer(minLength: 0)
+
+            // Compact GPU utilization and memory panels
             HStack(spacing: 12) {
                 ForEach(status.gpus, id: \.gpuId) { gpu in
-                    gpuRingCard(gpu: gpu, server: status.hostname)
+                    gpuMemoryCard(gpu: gpu, server: status.hostname)
                 }
             }
-            .frame(maxHeight: .infinity)
-
-            Spacer(minLength: 0)
+            .frame(height: 230)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -176,7 +198,6 @@ struct ContentView: View {
             Text(text)
                 .font(.system(size: 21, weight: .semibold, design: .rounded))
                 .foregroundColor(.white.opacity(0.9))
-                .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 12)
@@ -235,20 +256,46 @@ struct ContentView: View {
         .accessibilityLabel("Top GPU processes: \(processes.prefix(3).map(\.displayName).joined(separator: ", "))")
     }
 
-    private func gpuRingCard(gpu: GPU, server: String) -> some View {
+    private func gpuMemoryCard(gpu: GPU, server: String) -> some View {
         VStack(spacing: 8) {
             Text("GPU \(gpu.gpuId)")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white.opacity(0.5))
 
-            // Utilization ring sized to avoid overlap with header
-            utilizationRing(percent: gpu.utilizationPercent)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .padding(8)
+            utilizationBar(percent: gpu.utilizationPercent)
+
+            Spacer(minLength: 0)
 
             memoryPanel(gpu: gpu, server: server)
         }
+    }
+
+    private func utilizationBar(percent: Int) -> some View {
+        let clampedPercent = min(max(percent, 0), 100)
+
+        return VStack(spacing: 4) {
+            HStack {
+                Text("GPU LOAD")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.4))
+                Spacer()
+                Text("\(clampedPercent)%")
+                    .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                    .foregroundColor(colorForUtilization(clampedPercent))
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.1))
+                    Capsule()
+                        .fill(colorForUtilization(clampedPercent))
+                        .frame(width: geometry.size.width * Double(clampedPercent) / 100.0)
+                }
+            }
+            .frame(height: 10)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("GPU utilization \(clampedPercent) percent")
     }
 
     @ViewBuilder
@@ -333,41 +380,6 @@ struct ContentView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white.opacity(0.25))
                 .frame(height: 34)
-        }
-    }
-
-    private func utilizationRing(percent: Int) -> some View {
-        let fraction = Double(min(percent, 100)) / 100.0
-        let ringColor = colorForUtilization(percent)
-
-        return GeometryReader { geo in
-            // Scale stroke and label to the ring's actual size so the
-            // percentage always fits inside the circle.
-            let diameter = min(geo.size.width, geo.size.height)
-            let lineWidth = max(6, diameter * 0.075)
-            let inset = lineWidth + diameter * 0.06
-            let fontSize = max(12, diameter * 0.30)
-
-            ZStack {
-                // Background track
-                Circle()
-                    .stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-
-                // Filled arc
-                Circle()
-                    .trim(from: 0, to: fraction)
-                    .stroke(ringColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-
-                // Percentage in the center
-                Text("\(percent)%")
-                    .font(.system(size: fontSize, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .frame(width: max(0, diameter - inset * 2))
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 
@@ -512,6 +524,7 @@ struct ContentView: View {
     private func formatMemoryCompact(_ mb: Int) -> String {
         mb >= 1024 ? String(format: "%.1f GB", Double(mb) / 1024.0) : "\(mb) MB"
     }
+
 }
 
 struct ContentView_Previews: PreviewProvider {

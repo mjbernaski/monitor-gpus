@@ -36,6 +36,12 @@ class GPUMonitorViewModel: ObservableObject {
         serverStatuses.reduce(0) { $0 + $1.totalWattage }
     }
 
+    var totalMemoryCapacityGb: Int {
+        // Fleet capacity is installed hardware, so it remains 288 GB even if
+        // one of the three monitoring endpoints is temporarily unavailable.
+        32 + 128 + 128
+    }
+
     func startMonitoring() {
         // Initial fetch
         fetchTask = Task {

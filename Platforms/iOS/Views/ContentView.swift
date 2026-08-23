@@ -74,6 +74,19 @@ struct ContentView: View {
                     .foregroundColor(colorForWattage(viewModel.totalWattage))
                     .contentTransition(.numericText())
             }
+
+            if viewModel.totalMemoryCapacityGb > 0 {
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("MEMORY")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.secondary)
+                    Text("\(viewModel.totalMemoryCapacityGb) GB")
+                        .font(.system(size: horizontalSizeClass == .regular ? 30 : 23, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.cyan)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Total memory capacity \(viewModel.totalMemoryCapacityGb) gigabytes")
+            }
         }
         .padding(18)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20))
@@ -96,11 +109,18 @@ struct ContentView: View {
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
+                    if let capacity = status.memoryCapacityLabel {
+                        Text(capacity)
+                            .font(.system(.caption2, design: .monospaced).weight(.heavy))
+                            .foregroundColor(.cyan.opacity(0.8))
+                    }
                 }
                 Spacer()
                 Text("\(status.totalWattage, specifier: "%.0f")W")
-                    .font(.system(size: 32, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 26, weight: .heavy, design: .monospaced))
                     .foregroundColor(colorForWattage(status.totalWattage))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .contentTransition(.numericText())
             }
 
@@ -195,10 +215,7 @@ struct ContentView: View {
 
     private func gpuCard(_ gpu: GPU, server: String) -> some View {
         VStack(spacing: 12) {
-            HStack(spacing: 16) {
-                utilizationRing(percent: gpu.utilizationPercent)
-                    .frame(width: 108, height: 108)
-
+            HStack {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("GPU \(gpu.gpuId)")
                         .font(.caption.weight(.bold))
@@ -219,31 +236,40 @@ struct ContentView: View {
                 Spacer(minLength: 0)
             }
 
+            utilizationBar(percent: gpu.utilizationPercent)
+
             memoryPanel(gpu, server: server)
         }
         .padding(12)
         .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private func utilizationRing(percent: Int) -> some View {
-        let fraction = Double(min(max(percent, 0), 100)) / 100
-        let color = colorForUtilization(percent)
+    private func utilizationBar(percent: Int) -> some View {
+        let clampedPercent = min(max(percent, 0), 100)
 
-        return ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.1), lineWidth: 10)
-            Circle()
-                .trim(from: 0, to: fraction)
-                .stroke(color, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            VStack(spacing: 0) {
-                Text("\(percent)%")
-                    .font(.system(size: 27, weight: .heavy, design: .monospaced))
-                Text("UTIL")
+        return VStack(spacing: 4) {
+            HStack {
+                Text("GPU LOAD")
                     .font(.caption2.weight(.bold))
                     .foregroundColor(.secondary)
+                Spacer()
+                Text("\(clampedPercent)%")
+                    .font(.system(.subheadline, design: .monospaced).weight(.heavy))
+                    .foregroundColor(colorForUtilization(clampedPercent))
             }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.1))
+                    Capsule()
+                        .fill(colorForUtilization(clampedPercent))
+                        .frame(width: geometry.size.width * Double(clampedPercent) / 100.0)
+                }
+            }
+            .frame(height: 8)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("GPU utilization \(clampedPercent) percent")
     }
 
     @ViewBuilder

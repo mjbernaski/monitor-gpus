@@ -23,6 +23,30 @@ struct GPUStatus: Codable, Identifiable {
     var totalWattage: Double {
         gpus.reduce(0) { $0 + $1.powerDrawWatts }
     }
+
+    /// Installed accelerator-accessible memory. The monitoring agents report
+    /// free memory, but do not currently include the machine's total capacity.
+    var memoryCapacityGb: Int? {
+        let normalizedHostname = hostname.lowercased()
+
+        if normalizedHostname.contains("vengeance") || ipAddress == "192.168.6.40" {
+            return 32
+        }
+
+        if normalizedHostname.contains("spark") ||
+            ipAddress == "192.168.5.40" ||
+            ipAddress == "192.168.5.46" {
+            return 128
+        }
+
+        return nil
+    }
+
+    var memoryCapacityLabel: String? {
+        guard let memoryCapacityGb else { return nil }
+        let memoryType = memoryCapacityGb == 32 ? "VRAM" : "UNI"
+        return "\(memoryCapacityGb) GB \(memoryType)"
+    }
 }
 
 struct StatusNote: Codable {

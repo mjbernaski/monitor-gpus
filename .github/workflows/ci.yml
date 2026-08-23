@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.scheme }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scheme: GPUMonitor-iOS
+            destination: generic/platform=iOS
+          - scheme: GPUMonitor-tvOS
+            destination: generic/platform=tvOS
+          - scheme: GPUMonitor-watchOS
+            destination: generic/platform=watchOS
+          - scheme: GPUMonitor-macOS
+            destination: generic/platform=macOS
+          - scheme: GPUMonitorWidgetApp
+            destination: generic/platform=macOS
+          - scheme: gpu-cli
+            destination: generic/platform=macOS
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project GPUMonitor.xcodeproj \
+            -scheme "${{ matrix.scheme }}" \
+            -configuration Debug \
+            -destination "${{ matrix.destination }}" \
+            -derivedDataPath ".build/ci-${{ matrix.scheme }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee ".build/ci-${{ matrix.scheme }}.log"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.scheme }}-build-log
+          path: .build/ci-${{ matrix.scheme }}.log
+          if-no-files-found: ignore

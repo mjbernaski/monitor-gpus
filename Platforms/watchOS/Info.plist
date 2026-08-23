@@ -29,8 +29,8 @@
     </array>
     <key>WKApplication</key>
     <true/>
-    <key>WKWatchOnly</key>
-    <true/>
+    <key>WKCompanionAppBundleIdentifier</key>
+    <string>com.gpumonitor.ios</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>

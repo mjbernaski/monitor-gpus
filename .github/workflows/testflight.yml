@@ -1,0 +1,96 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Upload ${{ matrix.label }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: iOS-watchOS
+            scheme: GPUMonitor-iOS
+            destination: generic/platform=iOS
+            archive: Watts-iOS.xcarchive
+          - label: tvOS
+            scheme: GPUMonitor-tvOS
+            destination: generic/platform=tvOS
+            archive: Watts-tvOS.xcarchive
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Configure App Store Connect API key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          test -n "$ASC_PRIVATE_KEY"
+          umask 077
+          printf '%s' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Set build number
+        run: echo "BUILD_NUMBER=$((10000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project GPUMonitor.xcodeproj \
+            -scheme "${{ matrix.scheme }}" \
+            -configuration Release \
+            -destination "${{ matrix.destination }}" \
+            -archivePath "$RUNNER_TEMP/${{ matrix.archive }}" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData-${{ matrix.label }}" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            archive | tee ".build/archive-${{ matrix.label }}.log"
+
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/${{ matrix.archive }}" \
+            -exportOptionsPlist Config/ExportOptions-TestFlight.plist \
+            -exportPath "$RUNNER_TEMP/export-${{ matrix.label }}" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tee ".build/upload-${{ matrix.label }}.log"
+
+      - name: Upload release logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}-release-logs
+          path: .build/*.log
+          if-no-files-found: ignore

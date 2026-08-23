@@ -211,8 +211,12 @@ struct GPUMonitorWidgetEntryView: View {
                         Text("\(Int(gpu.powerDrawWatts))W")
                             .font(.caption2)
                             .foregroundColor(.green)
+                        ProgressView(value: Double(min(max(gpu.utilizationPercent, 0), 100)), total: 100)
+                            .progressViewStyle(.linear)
+                            .tint(.blue)
+                            .frame(maxWidth: 42)
                         Text("\(gpu.utilizationPercent)%")
-                            .font(.caption2)
+                            .font(.caption2.monospacedDigit())
                             .foregroundColor(.blue)
                     }
                 }

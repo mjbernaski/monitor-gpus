@@ -50,6 +50,13 @@ struct ContentView: View {
                     .foregroundColor(colorForWattage(viewModel.totalWattage))
                     .contentTransition(.numericText())
 
+                if viewModel.totalMemoryCapacityGb > 0 {
+                    Text("\(viewModel.totalMemoryCapacityGb) GB MEMORY")
+                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.cyan)
+                        .accessibilityLabel("Total memory capacity \(viewModel.totalMemoryCapacityGb) gigabytes")
+                }
+
                 ForEach(orderedStatuses) { status in
                     HStack(spacing: 5) {
                         Circle()
@@ -100,6 +107,12 @@ struct ContentView: View {
                         .lineLimit(1)
                 }
 
+                if let capacity = status.memoryCapacityLabel {
+                    Text(capacity)
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.cyan.opacity(0.8))
+                }
+
                 Text("\(status.totalWattage, specifier: "%.0f")W")
                     .font(.system(size: 38, weight: .heavy, design: .rounded))
                     .foregroundColor(colorForWattage(status.totalWattage))
@@ -131,12 +144,14 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
                 Spacer()
                 Text("\(gpu.utilizationPercent)%")
-                    .font(.system(.title3, design: .monospaced).weight(.heavy))
+                    .font(.system(.caption, design: .monospaced).weight(.heavy))
                     .foregroundColor(colorForUtilization(gpu.utilizationPercent))
-                Text("UTIL")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.secondary)
             }
+
+            ProgressView(value: Double(min(max(gpu.utilizationPercent, 0), 100)), total: 100)
+                .tint(colorForUtilization(gpu.utilizationPercent))
+                .accessibilityLabel("GPU utilization")
+                .accessibilityValue("\(gpu.utilizationPercent) percent")
 
             if let memory = gpu.memoryFreeMb {
                 HStack(alignment: .firstTextBaseline) {

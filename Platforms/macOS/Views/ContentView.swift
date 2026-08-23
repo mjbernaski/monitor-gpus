@@ -53,6 +53,16 @@ struct ContentView: View {
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundColor(colorForWattage(viewModel.totalWattage))
             }
+
+
+            if viewModel.totalMemoryCapacityGb > 0 {
+                Divider()
+                    .frame(height: 12)
+                Text("\(viewModel.totalMemoryCapacityGb) GB memory")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.cyan)
+                    .accessibilityLabel("Total memory capacity \(viewModel.totalMemoryCapacityGb) gigabytes")
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -98,6 +108,12 @@ struct ContentView: View {
                 Text("\(status.totalWattage, specifier: "%.0f")W")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(colorForWattage(status.totalWattage))
+            }
+
+            if let capacity = status.memoryCapacityLabel {
+                Text(capacity)
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.cyan.opacity(0.8))
             }
 
             if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
