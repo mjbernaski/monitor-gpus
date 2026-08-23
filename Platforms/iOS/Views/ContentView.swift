@@ -23,6 +23,20 @@ struct ContentView: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            if geometry.size.width > geometry.size.height {
+                landscapeDashboard
+            } else {
+                portraitDashboard
+            }
+        }
+        .background(Color.black.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+        .onAppear { viewModel.startMonitoring() }
+        .onDisappear { viewModel.stopMonitoring() }
+    }
+
+    private var portraitDashboard: some View {
         ScrollView {
             VStack(spacing: 18) {
                 headerCard
@@ -47,10 +61,186 @@ struct ContentView: View {
             }
             .padding()
         }
-        .background(Color.black.ignoresSafeArea())
-        .preferredColorScheme(.dark)
-        .onAppear { viewModel.startMonitoring() }
-        .onDisappear { viewModel.stopMonitoring() }
+    }
+
+    private var landscapeDashboard: some View {
+        VStack(spacing: 10) {
+            landscapeHeader
+
+            if viewModel.serverStatuses.isEmpty {
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Connecting to servers…")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(orderedStatuses) { status in
+                        landscapeServerCard(status, color: colorForServer(status.hostname))
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .padding(10)
+        .dynamicTypeSize(.xSmall ... .large)
+    }
+
+    private var landscapeHeader: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("WATTS")
+                    .font(.system(.headline, design: .monospaced).weight(.heavy))
+                Text("LIVE SYSTEM POWER")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            Label("\(orderedStatuses.count) SERVERS", systemImage: "server.rack")
+                .font(.system(.caption, design: .monospaced).weight(.bold))
+                .foregroundColor(.secondary)
+
+            Text("\(viewModel.totalWattage, specifier: "%.0f")W")
+                .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                .foregroundColor(colorForWattage(viewModel.totalWattage))
+                .contentTransition(.numericText())
+
+            Text("\(viewModel.totalMemoryCapacityGb) GB")
+                .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                .foregroundColor(.cyan)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func landscapeServerCard(_ status: GPUStatus, color: Color) -> some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: .green, radius: 3)
+                    .padding(.top, 4)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(status.hostname.uppercased())
+                        .font(.system(.subheadline, design: .monospaced).weight(.heavy))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                    if let ipAddress = status.ipAddress {
+                        Text(ipAddress)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 2)
+
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("\(status.totalWattage, specifier: "%.0f")W")
+                        .font(.system(size: 22, weight: .heavy, design: .monospaced))
+                        .foregroundColor(colorForWattage(status.totalWattage))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    if let capacity = status.memoryCapacityLabel {
+                        Text(capacity)
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundColor(.cyan.opacity(0.85))
+                    }
+                }
+            }
+
+            if let workload = vengeanceWorkload(for: status) {
+                Label(workload.label, systemImage: workload.symbol)
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .foregroundColor(workload.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(workload.color.opacity(0.13), in: Capsule())
+            }
+
+            if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Label(note.text, systemImage: "note.text")
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.85))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let processes = status.topProcesses, !processes.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "cpu")
+                    Text(processes.prefix(2).map(\.displayName).joined(separator: " • "))
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                        .minimumScaleFactor(0.6)
+                }
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundColor(.purple)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Spacer(minLength: 0)
+
+            ForEach(status.gpus, id: \.gpuId) { gpu in
+                landscapeGPUCard(gpu, server: status.hostname)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(color.opacity(0.42), lineWidth: 1.5))
+    }
+
+    private func landscapeGPUCard(_ gpu: GPU, server: String) -> some View {
+        VStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text("GPU \(gpu.gpuId)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary)
+                Spacer(minLength: 2)
+                Text("\(gpu.powerDrawWatts, specifier: "%.0f")W")
+                    .font(.system(.subheadline, design: .monospaced).weight(.heavy))
+                Text("\(min(max(gpu.utilizationPercent, 0), 100))%")
+                    .font(.system(.caption, design: .monospaced).weight(.heavy))
+                    .foregroundColor(colorForUtilization(gpu.utilizationPercent))
+            }
+
+            GeometryReader { geometry in
+                let utilization = Double(min(max(gpu.utilizationPercent, 0), 100)) / 100
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.1))
+                    Capsule()
+                        .fill(colorForUtilization(gpu.utilizationPercent))
+                        .frame(width: geometry.size.width * utilization)
+                }
+            }
+            .frame(height: 6)
+
+            if let freeMb = gpu.memoryFreeMb {
+                HStack(spacing: 4) {
+                    Text(memoryLabel(for: server))
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                    Spacer(minLength: 2)
+                    Text(formatMemory(freeMb))
+                        .font(.system(.caption, design: .monospaced).weight(.heavy))
+                        .foregroundColor(.cyan)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 10))
     }
 
     private var headerCard: some View {
