@@ -25,7 +25,11 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             if geometry.size.width > geometry.size.height {
-                landscapeDashboard
+                if horizontalSizeClass == .regular {
+                    iPadLandscapeDashboard
+                } else {
+                    landscapeDashboard
+                }
             } else {
                 portraitDashboard
             }
@@ -75,16 +79,50 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(orderedStatuses) { status in
-                        landscapeServerCard(status, color: colorForServer(status.hostname))
+                VStack(spacing: 7) {
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(orderedStatuses) { status in
+                            landscapeServerCard(status, color: colorForServer(status.hostname))
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    landscapePowerChart
+                        .frame(height: 58)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding(10)
         .dynamicTypeSize(.xSmall ... .large)
+    }
+
+    private var iPadLandscapeDashboard: some View {
+        VStack(spacing: 14) {
+            headerCard
+
+            if viewModel.serverStatuses.isEmpty {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Connecting to servers…")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(orderedStatuses) { status in
+                        serverCard(status, color: colorForServer(status.hostname))
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                landscapePowerChart
+                    .frame(height: 140)
+            }
+        }
+        .padding(16)
+        .dynamicTypeSize(.small ... .xxLarge)
     }
 
     private var landscapeHeader: some View {
@@ -99,18 +137,24 @@ struct ContentView: View {
 
             Spacer(minLength: 0)
 
-            Label("\(orderedStatuses.count) SERVERS", systemImage: "server.rack")
-                .font(.system(.caption, design: .monospaced).weight(.bold))
-                .foregroundColor(.secondary)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("TOTAL")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.secondary)
+                Text("\(viewModel.totalWattage, specifier: "%.0f")W")
+                    .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                    .foregroundColor(colorForWattage(viewModel.totalWattage))
+                    .contentTransition(.numericText())
+            }
 
-            Text("\(viewModel.totalWattage, specifier: "%.0f")W")
-                .font(.system(size: 28, weight: .heavy, design: .monospaced))
-                .foregroundColor(colorForWattage(viewModel.totalWattage))
-                .contentTransition(.numericText())
-
-            Text("\(viewModel.totalMemoryCapacityGb) GB")
-                .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .foregroundColor(.cyan)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("MEMORY CAPACITY")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.secondary)
+                Text("\(viewModel.totalMemoryCapacityGb) GB")
+                    .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.cyan)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -167,24 +211,19 @@ struct ContentView: View {
 
             if let note = status.note, !note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Label(note.text, systemImage: "note.text")
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.system(size: 8, weight: .semibold, design: .rounded))
                     .foregroundColor(.white.opacity(0.85))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.65)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(color.opacity(0.10), in: RoundedRectangle(cornerRadius: 7))
+                    .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(color.opacity(0.3)))
             }
 
             if let processes = status.topProcesses, !processes.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "cpu")
-                    Text(processes.prefix(2).map(\.displayName).joined(separator: " • "))
-                        .lineLimit(1)
-                        .truncationMode(.head)
-                        .minimumScaleFactor(0.6)
-                }
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundColor(.purple)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                landscapeProcessPanel(processes)
             }
 
             Spacer(minLength: 0)
@@ -199,15 +238,58 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(color.opacity(0.42), lineWidth: 1.5))
     }
 
+    private func landscapeProcessPanel(_ processes: [GPUProcess]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("TOP GPU PROCESSES")
+                .font(.system(size: 7, weight: .bold))
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 4) {
+                ForEach(Array(processes.prefix(3).enumerated()), id: \.offset) { index, process in
+                    HStack(spacing: 3) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.black)
+                            .frame(width: 14, height: 14)
+                            .background(Color.purple, in: Circle())
+
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(process.displayName)
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                .lineLimit(1)
+                                .truncationMode(.head)
+                                .minimumScaleFactor(0.55)
+                            if let memory = process.memoryLabel {
+                                Text(memory)
+                                    .font(.system(size: 6, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.purple.opacity(0.30)))
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Top GPU processes: \(processes.prefix(3).map(\.displayName).joined(separator: ", "))")
+    }
+
     private func landscapeGPUCard(_ gpu: GPU, server: String) -> some View {
         VStack(spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text("GPU \(gpu.gpuId)")
-                    .font(.system(size: 9, weight: .bold))
+            Text("GPU \(gpu.gpuId)")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 5) {
+                Text("GPU LOAD")
+                    .font(.system(size: 7, weight: .bold))
                     .foregroundColor(.secondary)
                 Spacer(minLength: 2)
-                Text("\(gpu.powerDrawWatts, specifier: "%.0f")W")
-                    .font(.system(.subheadline, design: .monospaced).weight(.heavy))
                 Text("\(min(max(gpu.utilizationPercent, 0), 100))%")
                     .font(.system(.caption, design: .monospaced).weight(.heavy))
                     .foregroundColor(colorForUtilization(gpu.utilizationPercent))
@@ -225,22 +307,111 @@ struct ContentView: View {
             .frame(height: 6)
 
             if let freeMb = gpu.memoryFreeMb {
-                HStack(spacing: 4) {
+                landscapeMemoryPanel(freeMb: freeMb, gpuId: gpu.gpuId, server: server)
+            }
+        }
+    }
+
+    private func landscapeMemoryPanel(freeMb: Int, gpuId: Int, server: String) -> some View {
+        let history = memoryHistory(server: server, gpuId: gpuId)
+        let domain = memoryDomain(for: history)
+
+        return VStack(spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(memoryLabel(for: server))
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 7, weight: .bold))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
-                    Spacer(minLength: 2)
                     Text(formatMemory(freeMb))
-                        .font(.system(.caption, design: .monospaced).weight(.heavy))
+                        .font(.system(size: 15, weight: .heavy, design: .monospaced))
                         .foregroundColor(.cyan)
                         .lineLimit(1)
                 }
+
+                Spacer(minLength: 2)
+
+                if let low = history.map(\.freeMb).min() {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("ROLLING LOW")
+                            .font(.system(size: 6, weight: .bold))
+                            .foregroundColor(.secondary)
+                        Text(formatMemory(low))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.65))
+                    }
+                }
+            }
+
+            if history.count > 1 {
+                Chart(history) { point in
+                    AreaMark(
+                        x: .value("Time", point.timestamp),
+                        yStart: .value("Chart minimum", domain.lowerBound),
+                        yEnd: .value("Free memory", point.freeMb)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.cyan.opacity(0.28), .cyan.opacity(0.02)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Time", point.timestamp),
+                        y: .value("Free memory", point.freeMb)
+                    )
+                    .foregroundStyle(.cyan)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .interpolationMethod(.catmullRom)
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .chartYScale(domain: domain)
+                .frame(height: 30)
+            } else {
+                Text("COLLECTING HISTORY…")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .frame(height: 30)
             }
         }
-        .padding(8)
-        .background(Color.black.opacity(0.24), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(Color.cyan.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.cyan.opacity(0.24)))
+    }
+
+    private var landscapePowerChart: some View {
+        Chart(serverHistory) { point in
+            LineMark(
+                x: .value("Time", point.timestamp),
+                y: .value("Log watts", log10(max(point.watts, 1)))
+            )
+            .foregroundStyle(by: .value("Server", point.server))
+            .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round))
+            .interpolationMethod(.catmullRom)
+        }
+        .chartForegroundStyleScale(domain: chartColorDomain, range: chartColorRange)
+        .chartXAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 2]))
+                    .foregroundStyle(Color.gray.opacity(0.2))
+                AxisValueLabel {
+                    if let logValue = value.as(Double.self) {
+                        Text("\(Int(pow(10, logValue)))W")
+                            .font(.system(size: 6, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.4))
+                    }
+                }
+            }
+        }
+        .chartLegend(.hidden)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 3)
+        .background(Color.white.opacity(0.02), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var headerCard: some View {

@@ -8,8 +8,8 @@ struct GPUMonitorApp: App {
         }
         #if os(macOS)
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultSize(width: 400, height: 300)
+        .windowResizability(.automatic)
+        .defaultSize(width: 1100, height: 650)
         #endif
     }
 }
